@@ -69,7 +69,12 @@
                 </div>
             </div>
             
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-3 sm:gap-4">
+                <a href="https://placekwlb.github.io" target="_blank" rel="noopener noreferrer" 
+                   class="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <i class="fa-solid fa-house text-slate-500 dark:text-slate-400"></i>
+                    <span class="hidden sm:inline">placekwlb.github.io</span>
+                </a>
                 <button id="theme-toggle" class="p-2.5 rounded-xl bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 transition">
                     <i id="theme-toggle-dark-icon" class="fa-solid fa-moon text-lg hidden"></i>
                     <i id="theme-toggle-light-icon" class="fa-solid fa-sun text-lg"></i>
@@ -103,12 +108,17 @@
                 <div>
                     <!-- Form 1: General Text/URL -->
                     <div id="form-text" class="form-section">
-                        <div class="flex justify-between items-center mb-2">
+                        <div class="flex justify-between items-center mb-2 gap-2 flex-wrap">
                             <label for="qr-text" class="text-sm font-medium text-slate-700 dark:text-slate-200">Tekst lub adres URL</label>
-                            <span id="char-counter" class="text-xs text-slate-400">0 znaków</span>
+                            <div class="flex items-center gap-2">
+                                <span id="url-detected-badge" class="hidden text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800/60">
+                                    <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i> Wykryto link &rarr; dodano https://
+                                </span>
+                                <span id="char-counter" class="text-xs text-slate-400">0 znaków</span>
+                            </div>
                         </div>
                         <div class="relative">
-                            <textarea id="qr-text" rows="4" placeholder="Wpisz adres strony (np. https://example.com) lub dowolny tekst..." 
+                            <textarea id="qr-text" rows="4" placeholder="example.com" 
                                 class="w-full p-3.5 bg-slate-50 dark:bg-slate-900/60 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition text-sm custom-scrollbar resize-none"></textarea>
                         </div>
                     </div>
@@ -269,6 +279,7 @@
 
             // Form & Input Elements
             const qrText = document.getElementById('qr-text');
+            const urlDetectedBadge = document.getElementById('url-detected-badge');
             const wifiSsid = document.getElementById('wifi-ssid');
             const wifiPass = document.getElementById('wifi-pass');
             const wifiType = document.getElementById('wifi-type');
@@ -302,14 +313,11 @@
             const qr = new QRious({
                 element: qrCanvas,
                 size: parseInt(qrSize.value),
-                value: 'https://example.com',
+                value: 'https://placekwlb.github.io',
                 foreground: qrFgColor.value,
                 background: qrBgColor.value,
                 level: qrLevel.value
             });
-
-            // Set default value
-            qrText.value = 'https://example.com';
 
             // --- Theme Handling ---
             function initTheme() {
@@ -364,17 +372,41 @@
                 });
             });
 
+            // --- Helper: Domain Detection ---
+            function isDomainWithoutProtocol(str) {
+                // If it already contains scheme prefix (http://, https://, mailto:, tel:, WIFI:, etc.), skip
+                if (/^[a-zA-Z0-9+.-]+:/.test(str)) return false;
+
+                // Check for domain-like structure with valid TLD (e.g. domain.com, sub.domain.org/path)
+                const domainRegex = /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}(?:\/[^\s]*)?$/;
+                return domainRegex.test(str);
+            }
+
             // --- Get String Payload Based on Tab ---
             function getQRValue() {
                 if (activeTab === 'text') {
-                    return qrText.value.trim();
+                    const raw = qrText.value.trim();
+                    if (!raw) {
+                        if (urlDetectedBadge) urlDetectedBadge.classList.add('hidden');
+                        return 'https://placekwlb.github.io'; // Default fallback for preview
+                    }
+
+                    if (isDomainWithoutProtocol(raw)) {
+                        if (urlDetectedBadge) urlDetectedBadge.classList.remove('hidden');
+                        return 'https://' + raw;
+                    } else {
+                        if (urlDetectedBadge) urlDetectedBadge.classList.add('hidden');
+                        return raw;
+                    }
                 } else if (activeTab === 'wifi') {
+                    if (urlDetectedBadge) urlDetectedBadge.classList.add('hidden');
                     const ssid = wifiSsid.value.trim();
                     const pass = wifiPass.value;
                     const type = wifiType.value;
                     if (!ssid) return '';
                     return `WIFI:S:${ssid};T:${type};P:${pass};;`;
                 } else if (activeTab === 'email') {
+                    if (urlDetectedBadge) urlDetectedBadge.classList.add('hidden');
                     const mail = emailTo.value.trim();
                     const sub = emailSubject.value.trim();
                     if (!mail) return '';
@@ -386,9 +418,10 @@
             // --- Update QR Code ---
             function updateQR() {
                 const rawValue = getQRValue();
+                const userEnteredText = activeTab === 'text' ? qrText.value.trim() : rawValue;
 
                 // Update counter
-                charCounter.textContent = `${rawValue.length} znaków`;
+                charCounter.textContent = `${userEnteredText.length} znaków`;
 
                 if (!rawValue) {
                     qrCanvas.classList.add('hidden');
@@ -449,7 +482,7 @@
             // --- History Management ---
             function saveToHistory() {
                 const val = getQRValue();
-                if (!val || val.length < 2) return;
+                if (!val || val === 'https://placekwlb.github.io' && !qrText.value.trim()) return;
 
                 // Avoid duplicate top entry
                 if (qrHistory.length > 0 && qrHistory[0] === val) return;
