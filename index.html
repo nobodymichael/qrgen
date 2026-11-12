@@ -1,622 +1,127 @@
 <!DOCTYPE html>
-<html lang="pl" class="h-full">
+<html lang="pl" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QRGen - Generator Kodów QR</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <!-- QRious Library CDN for reliable QR generation via Canvas -->
+    <title>QRGen — Michał Plata</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
-    <!-- Inter Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    },
-                    colors: {
-                        brand: {
-                            50: '#eff6ff',
-                            100: '#dbeafe',
-                            500: '#3b82f6',
-                            600: '#2563eb',
-                            700: '#1d4ed8',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
     <style>
-        /* Custom scrollbar and background gradients */
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: rgba(156, 163, 175, 0.4);
-            border-radius: 9999px;
-        }
+        body { font-family: 'Inter', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
     </style>
 </head>
-<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-full transition-colors duration-200 flex flex-col justify-between">
+<body class="bg-zinc-950 text-zinc-100 min-h-screen flex flex-col selection:bg-emerald-500 selection:text-black">
+    
+    <!-- Top Navigation Bar -->
+    <header class="border-b border-zinc-800/80 bg-zinc-900/50 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
+            <a href="https://placekwlb.github.io/" class="inline-flex items-center gap-2 text-sm font-medium text-zinc-400 hover:text-white transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                <span>Strona główna</span>
+            </a>
+            <span class="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">QRGen Tool</span>
+        </div>
+    </header>
 
-    <!-- Notification Toast container -->
-    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
-
-    <div class="max-w-6xl w-full mx-auto px-4 py-6 sm:py-10 flex-grow">
+    <!-- Main Content -->
+    <main class="max-w-4xl mx-auto px-4 py-8 flex-1 w-full grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
         
-        <!-- Header Section -->
-        <header class="flex justify-between items-center mb-8 pb-4 border-b border-slate-200 dark:border-slate-800">
-            <div class="flex items-center gap-3">
-                <div class="w-11 h-11 bg-brand-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/30">
-                    <i class="fa-solid font-bold fa-qrcode text-2xl"></i>
-                </div>
-                <div>
-                    <h1 class="text-2xl font-bold tracking-tight">QRGen</h1>
-                    <p class="text-xs text-slate-500 dark:text-slate-400">Nowoczesny generator kodów QR</p>
+        <!-- Controls -->
+        <div class="space-y-6">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight mb-2">Generator QR</h1>
+                <p class="text-zinc-400 text-sm">Wpisz tekst lub link, aby błyskawicznie wygenerować kod QR.</p>
+            </div>
+
+            <div class="space-y-2">
+                <label class="block text-xs font-mono uppercase tracking-wider text-zinc-400">Tekst lub adres URL</label>
+                <textarea id="qrInput" rows="4" placeholder="example.com"
+                    class="w-full p-3 bg-zinc-900/80 border border-zinc-800 rounded-xl text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-sm font-mono resize-none">https://placekwlb.github.io</textarea>
+                <div id="autoLinkNotice" class="text-xs text-emerald-400 font-mono hidden flex items-center gap-1.5 mt-1">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    Wykryto link → automatycznie dodano https://
                 </div>
             </div>
-            
-            <div class="flex items-center gap-3 sm:gap-4">
-                <a href="https://placekwlb.github.io" target="_blank" rel="noopener noreferrer" 
-                   class="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition border border-slate-200 dark:border-slate-700 shadow-sm">
-                    <i class="fa-solid fa-house text-slate-500 dark:text-slate-400"></i>
-                    <span class="hidden sm:inline">placekwlb.github.io</span>
-                </a>
-                <button id="theme-toggle" class="p-2.5 rounded-xl bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 transition">
-                    <i id="theme-toggle-dark-icon" class="fa-solid fa-moon text-lg hidden"></i>
-                    <i id="theme-toggle-light-icon" class="fa-solid fa-sun text-lg"></i>
-                </button>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-1">
+                    <label class="block text-xs font-mono uppercase tracking-wider text-zinc-400">Rozmiar (px)</label>
+                    <select id="qrSize" class="w-full p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-sm font-mono text-zinc-200 focus:outline-none focus:border-emerald-500">
+                        <option value="250">250 x 250</option>
+                        <option value="350" selected>350 x 350</option>
+                        <option value="500">500 x 500</option>
+                    </select>
+                </div>
+                <div class="space-y-1">
+                    <label class="block text-xs font-mono uppercase tracking-wider text-zinc-400">Kolor kodu</label>
+                    <input type="color" id="qrColor" value="#ffffff" class="w-full h-10 bg-zinc-900 border border-zinc-800 rounded-xl cursor-pointer p-1">
+                </div>
             </div>
-        </header>
+        </div>
 
-        <!-- Main Content Area -->
-        <main class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            
-            <!-- Left Column: Input & Settings -->
-            <section class="lg:col-span-7 bg-white dark:bg-slate-800/90 backdrop-blur border border-slate-200 dark:border-slate-700/60 rounded-2xl p-5 sm:p-7 shadow-sm flex flex-col gap-6">
-                
-                <!-- Quick Preset Tabs -->
-                <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Typ zawartości</label>
-                    <div class="flex flex-wrap gap-2">
-                        <button type="button" data-tab="text" class="tab-btn px-4 py-2 rounded-xl text-sm font-medium transition bg-brand-600 text-white shadow-sm flex items-center gap-2">
-                            <i class="fa-solid fa-link text-xs"></i> Tekst / URL
-                        </button>
-                        <button type="button" data-tab="wifi" class="tab-btn px-4 py-2 rounded-xl text-sm font-medium transition bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center gap-2">
-                            <i class="fa-solid fa-wifi text-xs"></i> Wi-Fi
-                        </button>
-                        <button type="button" data-tab="email" class="tab-btn px-4 py-2 rounded-xl text-sm font-medium transition bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center gap-2">
-                            <i class="fa-solid fa-envelope text-xs"></i> E-mail
-                        </button>
-                    </div>
-                </div>
+        <!-- Preview Card -->
+        <div class="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 flex flex-col items-center justify-center text-center">
+            <div class="bg-white p-4 rounded-xl shadow-xl mb-6">
+                <canvas id="qrCanvas"></canvas>
+            </div>
+            <button id="downloadBtn" class="w-full py-2.5 px-4 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold rounded-xl text-sm transition-colors font-mono cursor-pointer">
+                Pobierz PNG
+            </button>
+        </div>
+    </main>
 
-                <!-- Input Forms -->
-                <div>
-                    <!-- Form 1: General Text/URL -->
-                    <div id="form-text" class="form-section">
-                        <div class="flex justify-between items-center mb-2 gap-2 flex-wrap">
-                            <label for="qr-text" class="text-sm font-medium text-slate-700 dark:text-slate-200">Tekst lub adres URL</label>
-                            <div class="flex items-center gap-2">
-                                <span id="url-detected-badge" class="hidden text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800/60">
-                                    <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i> Wykryto link &rarr; dodano https://
-                                </span>
-                                <span id="char-counter" class="text-xs text-slate-400">0 znaków</span>
-                            </div>
-                        </div>
-                        <div class="relative">
-                            <textarea id="qr-text" rows="4" placeholder="example.com" 
-                                class="w-full p-3.5 bg-slate-50 dark:bg-slate-900/60 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition text-sm custom-scrollbar resize-none"></textarea>
-                        </div>
-                    </div>
+    <footer class="border-t border-zinc-900 py-6 text-center text-xs text-zinc-600 font-mono">
+        Michał Plata &copy; 2026
+    </footer>
 
-                    <!-- Form 2: WiFi Config -->
-                    <div id="form-wifi" class="form-section hidden space-y-3">
-                        <div>
-                            <label class="text-sm font-medium text-slate-700 dark:text-slate-200">Nazwa sieci (SSID)</label>
-                            <input type="text" id="wifi-ssid" placeholder="MojaSiećWiFi" class="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-sm">
-                        </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                                <label class="text-sm font-medium text-slate-700 dark:text-slate-200">Hasło</label>
-                                <input type="password" id="wifi-pass" placeholder="••••••••" class="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-sm">
-                            </div>
-                            <div>
-                                <label class="text-sm font-medium text-slate-700 dark:text-slate-200">Szyfrowanie</label>
-                                <select id="wifi-type" class="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-sm">
-                                    <option value="WPA">WPA/WPA2/WPA3</option>
-                                    <option value="WEP">WEP</option>
-                                    <option value="nopass">Brak hasła (Otwarta)</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Form 3: Email -->
-                    <div id="form-email" class="form-section hidden space-y-3">
-                        <div>
-                            <label class="text-sm font-medium text-slate-700 dark:text-slate-200">Adres e-mail odbiorcy</label>
-                            <input type="email" id="email-to" placeholder="kontakt@domena.pl" class="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-sm">
-                        </div>
-                        <div>
-                            <label class="text-sm font-medium text-slate-700 dark:text-slate-200">Temat wiadomości</label>
-                            <input type="text" id="email-subject" placeholder="Zapytanie ze strony" class="w-full mt-1 p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-sm">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Customization Accordion/Section -->
-                <div class="border-t border-slate-200 dark:border-slate-700/60 pt-5">
-                    <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-4">Personalizacja Wyglądu</h3>
-                    
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <!-- Color Pickers -->
-                        <div class="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700/40 flex items-center justify-between">
-                            <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Kolor kodu</span>
-                            <div class="flex items-center gap-2">
-                                <span id="fg-color-val" class="text-xs font-mono text-slate-500">#000000</span>
-                                <input type="color" id="qr-fgcolor" value="#000000" class="w-9 h-9 rounded-lg border-0 cursor-pointer bg-transparent">
-                            </div>
-                        </div>
-
-                        <div class="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700/40 flex items-center justify-between">
-                            <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Kolor tła</span>
-                            <div class="flex items-center gap-2">
-                                <span id="bg-color-val" class="text-xs font-mono text-slate-500">#FFFFFF</span>
-                                <input type="color" id="qr-bgcolor" value="#ffffff" class="w-9 h-9 rounded-lg border-0 cursor-pointer bg-transparent">
-                            </div>
-                        </div>
-
-                        <!-- Size Selector -->
-                        <div class="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700/40">
-                            <label for="qr-size" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Rozmiar wyjściowy</label>
-                            <select id="qr-size" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-brand-500">
-                                <option value="200">200 x 200 px (Mały)</option>
-                                <option value="300" selected>300 x 300 px (Standard)</option>
-                                <option value="500">500 x 500 px (Wysoka jakość)</option>
-                                <option value="1000">1000 x 1000 px (Druk HD)</option>
-                            </select>
-                        </div>
-
-                        <!-- Error Correction Level -->
-                        <div class="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700/40">
-                            <label for="qr-level" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Korekcja błędów</label>
-                            <select id="qr-level" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-brand-500">
-                                <option value="L">Niska (7%)</option>
-                                <option value="M">Średnia (15%)</option>
-                                <option value="Q" selected>Wysoka (25%)</option>
-                                <option value="H">Najwyższa (30%)</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Action Button for mobile or explicit generation -->
-                <button id="generate-btn" type="button" class="w-full py-3 px-4 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl shadow-md transition flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-arrows-rotate"></i> Odśwież kod QR
-                </button>
-            </section>
-
-            <!-- Right Column: Canvas Preview & Actions -->
-            <section class="lg:col-span-5 flex flex-col items-center gap-6">
-                
-                <div class="w-full bg-white dark:bg-slate-800/90 backdrop-blur border border-slate-200 dark:border-slate-700/60 rounded-2xl p-6 shadow-sm flex flex-col items-center text-center">
-                    
-                    <div class="mb-4 flex items-center justify-between w-full border-b border-slate-100 dark:border-slate-700/50 pb-3">
-                        <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Podgląd na żywo</span>
-                        <span id="status-badge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Gotowy
-                        </span>
-                    </div>
-
-                    <!-- Canvas Container -->
-                    <div class="relative group my-2 p-4 bg-slate-100 dark:bg-slate-900/80 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-inner flex items-center justify-center min-h-[240px] w-full">
-                        <!-- Canvas Element -->
-                        <canvas id="qr-canvas" class="max-w-full h-auto rounded-lg shadow-sm transition-transform duration-200 group-hover:scale-[1.01]"></canvas>
-                        
-                        <!-- Empty State Overlay -->
-                        <div id="empty-state" class="hidden flex-col items-center justify-center text-slate-400 py-8">
-                            <i class="fa-solid fa-qrcode text-5xl mb-2 opacity-40"></i>
-                            <p class="text-sm">Wpisz tekst, aby wygenerować kod QR</p>
-                        </div>
-                    </div>
-
-                    <p id="size-indicator" class="text-xs text-slate-400 my-2">Rozmiar wyjściowy: 300 x 300 px</p>
-
-                    <!-- Primary Export Actions -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full mt-4">
-                        <button id="download-png" class="py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl shadow transition flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-download"></i> Pobierz PNG
-                        </button>
-                        <button id="copy-img" class="py-3 px-4 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-medium rounded-xl transition flex items-center justify-center gap-2">
-                            <i class="fa-regular fa-copy"></i> Kopiuj Obraz
-                        </button>
-                    </div>
-                </div>
-
-                <!-- History Container -->
-                <div class="w-full bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-5 shadow-sm">
-                    <div class="flex items-center justify-between mb-3">
-                        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                            <i class="fa-solid fa-history"></i> Ostatnio generowane
-                        </h3>
-                        <button id="clear-history" class="text-xs text-slate-400 hover:text-rose-500 transition">Wyczyść</button>
-                    </div>
-                    <div id="history-list" class="flex flex-col gap-2 max-h-48 overflow-y-auto custom-scrollbar">
-                        <p class="text-xs text-slate-400 text-center py-3">Brak historii generowania</p>
-                    </div>
-                </div>
-
-            </section>
-        </main>
-
-        <!-- Footer -->
-        <footer class="mt-12 text-center text-xs text-slate-400 py-4">
-            <p>QRGen &copy; 2026 • Bezpieczny generator kodów QR działający w 100% lokalnie w Twojej przeglądarce.</p>
-        </footer>
-    </div>
-
-    <!-- Application Script -->
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Dark Mode Elements
-            const themeToggleBtn = document.getElementById('theme-toggle');
-            const darkIcon = document.getElementById('theme-toggle-dark-icon');
-            const lightIcon = document.getElementById('theme-toggle-light-icon');
+        const input = document.getElementById('qrInput');
+        const sizeSelect = document.getElementById('qrSize');
+        const colorPicker = document.getElementById('qrColor');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const notice = document.getElementById('autoLinkNotice');
 
-            // Form & Input Elements
-            const qrText = document.getElementById('qr-text');
-            const urlDetectedBadge = document.getElementById('url-detected-badge');
-            const wifiSsid = document.getElementById('wifi-ssid');
-            const wifiPass = document.getElementById('wifi-pass');
-            const wifiType = document.getElementById('wifi-type');
-            const emailTo = document.getElementById('email-to');
-            const emailSubject = document.getElementById('email-subject');
-            const charCounter = document.getElementById('char-counter');
+        const qr = new QRious({
+            element: document.getElementById('qrCanvas'),
+            size: 350,
+            value: input.value,
+            background: 'white',
+            foreground: '#000000'
+        });
 
-            // Options Elements
-            const qrFgColor = document.getElementById('qr-fgcolor');
-            const qrBgColor = document.getElementById('qr-bgcolor');
-            const fgColorVal = document.getElementById('fg-color-val');
-            const bgColorVal = document.getElementById('bg-color-val');
-            const qrSize = document.getElementById('qr-size');
-            const qrLevel = document.getElementById('qr-level');
-            const generateBtn = document.getElementById('generate-btn');
+        function updateQR() {
+            let val = input.value;
             
-            // Output Elements
-            const qrCanvas = document.getElementById('qr-canvas');
-            const emptyState = document.getElementById('empty-state');
-            const sizeIndicator = document.getElementById('size-indicator');
-            const downloadPngBtn = document.getElementById('download-png');
-            const copyImgBtn = document.getElementById('copy-img');
-            const historyList = document.getElementById('history-list');
-            const clearHistoryBtn = document.getElementById('clear-history');
-
-            let activeTab = 'text';
-            let debounceTimer = null;
-            let qrHistory = JSON.parse(localStorage.getItem('qr_gen_history') || '[]');
-
-            // Initialize QRious instance
-            const qr = new QRious({
-                element: qrCanvas,
-                size: parseInt(qrSize.value),
-                value: 'https://placekwlb.github.io',
-                foreground: qrFgColor.value,
-                background: qrBgColor.value,
-                level: qrLevel.value
-            });
-
-            // --- Theme Handling ---
-            function initTheme() {
-                if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                    document.documentElement.classList.add('dark');
-                    lightIcon.classList.remove('hidden');
-                    darkIcon.classList.add('hidden');
-                } else {
-                    document.documentElement.classList.remove('dark');
-                    darkIcon.classList.remove('hidden');
-                    lightIcon.classList.add('hidden');
-                }
+            // Inteligentna detekcja linku
+            const domainRegex = /^[a-zA-Z0-9][-a-zA-Z0-9]*(\.[a-zA-Z0-9][-a-zA-Z0-9]*)+(\/.*)?$/;
+            if (val.trim() && !val.includes('://') && domainRegex.test(val.trim())) {
+                val = 'https://' + val.trim();
+                notice.classList.remove('hidden');
+            } else {
+                notice.classList.add('hidden');
             }
 
-            themeToggleBtn.addEventListener('click', () => {
-                if (document.documentElement.classList.contains('dark')) {
-                    document.documentElement.classList.remove('dark');
-                    localStorage.setItem('color-theme', 'light');
-                    darkIcon.classList.remove('hidden');
-                    lightIcon.classList.add('hidden');
-                } else {
-                    document.documentElement.classList.add('dark');
-                    localStorage.setItem('color-theme', 'dark');
-                    lightIcon.classList.remove('hidden');
-                    darkIcon.classList.add('hidden');
-                }
+            qr.set({
+                value: val || 'https://placekwlb.github.io',
+                size: parseInt(sizeSelect.value),
+                foreground: colorPicker.value
             });
+        }
 
-            initTheme();
+        input.addEventListener('input', updateQR);
+        sizeSelect.addEventListener('change', updateQR);
+        colorPicker.addEventListener('input', updateQR);
 
-            // --- Tab Switching ---
-            const tabBtns = document.querySelectorAll('.tab-btn');
-            const formSections = document.querySelectorAll('.form-section');
-
-            tabBtns.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    activeTab = btn.dataset.tab;
-                    
-                    // Style tabs
-                    tabBtns.forEach(b => {
-                        b.classList.remove('bg-brand-600', 'text-white', 'shadow-sm');
-                        b.classList.add('bg-slate-100', 'dark:bg-slate-700/60', 'text-slate-600', 'dark:text-slate-300');
-                    });
-                    btn.classList.remove('bg-slate-100', 'dark:bg-slate-700/60', 'text-slate-600', 'dark:text-slate-300');
-                    btn.classList.add('bg-brand-600', 'text-white', 'shadow-sm');
-
-                    // Show correct form
-                    formSections.forEach(section => section.classList.add('hidden'));
-                    document.getElementById(`form-${activeTab}`).classList.remove('hidden');
-
-                    updateQR();
-                });
-            });
-
-            // --- Helper: Domain Detection ---
-            function isDomainWithoutProtocol(str) {
-                // If it already contains scheme prefix (http://, https://, mailto:, tel:, WIFI:, etc.), skip
-                if (/^[a-zA-Z0-9+.-]+:/.test(str)) return false;
-
-                // Check for domain-like structure with valid TLD (e.g. domain.com, sub.domain.org/path)
-                const domainRegex = /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}(?:\/[^\s]*)?$/;
-                return domainRegex.test(str);
-            }
-
-            // --- Get String Payload Based on Tab ---
-            function getQRValue() {
-                if (activeTab === 'text') {
-                    const raw = qrText.value.trim();
-                    if (!raw) {
-                        if (urlDetectedBadge) urlDetectedBadge.classList.add('hidden');
-                        return 'https://placekwlb.github.io'; // Default fallback for preview
-                    }
-
-                    if (isDomainWithoutProtocol(raw)) {
-                        if (urlDetectedBadge) urlDetectedBadge.classList.remove('hidden');
-                        return 'https://' + raw;
-                    } else {
-                        if (urlDetectedBadge) urlDetectedBadge.classList.add('hidden');
-                        return raw;
-                    }
-                } else if (activeTab === 'wifi') {
-                    if (urlDetectedBadge) urlDetectedBadge.classList.add('hidden');
-                    const ssid = wifiSsid.value.trim();
-                    const pass = wifiPass.value;
-                    const type = wifiType.value;
-                    if (!ssid) return '';
-                    return `WIFI:S:${ssid};T:${type};P:${pass};;`;
-                } else if (activeTab === 'email') {
-                    if (urlDetectedBadge) urlDetectedBadge.classList.add('hidden');
-                    const mail = emailTo.value.trim();
-                    const sub = emailSubject.value.trim();
-                    if (!mail) return '';
-                    return `mailto:${mail}${sub ? '?subject=' + encodeURIComponent(sub) : ''}`;
-                }
-                return '';
-            }
-
-            // --- Update QR Code ---
-            function updateQR() {
-                const rawValue = getQRValue();
-                const userEnteredText = activeTab === 'text' ? qrText.value.trim() : rawValue;
-
-                // Update counter
-                charCounter.textContent = `${userEnteredText.length} znaków`;
-
-                if (!rawValue) {
-                    qrCanvas.classList.add('hidden');
-                    emptyState.classList.remove('hidden');
-                    emptyState.classList.add('flex');
-                    return;
-                }
-
-                qrCanvas.classList.remove('hidden');
-                emptyState.classList.add('hidden');
-                emptyState.classList.remove('flex');
-
-                // Apply parameters to QR instance
-                qr.set({
-                    size: parseInt(qrSize.value),
-                    value: rawValue,
-                    foreground: qrFgColor.value,
-                    background: qrBgColor.value,
-                    level: qrLevel.value
-                });
-
-                sizeIndicator.textContent = `Rozmiar wyjściowy: ${qrSize.value} x ${qrSize.value} px`;
-            }
-
-            // Debounced updater for smooth typing
-            function triggerUpdate() {
-                clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(() => {
-                    updateQR();
-                    saveToHistory();
-                }, 200);
-            }
-
-            // Event Listeners for inputs
-            [qrText, wifiSsid, wifiPass, wifiType, emailTo, emailSubject].forEach(input => {
-                input.addEventListener('input', triggerUpdate);
-            });
-
-            // Color inputs formatting & listeners
-            qrFgColor.addEventListener('input', (e) => {
-                fgColorVal.textContent = e.target.value.toUpperCase();
-                triggerUpdate();
-            });
-
-            qrBgColor.addEventListener('input', (e) => {
-                bgColorVal.textContent = e.target.value.toUpperCase();
-                triggerUpdate();
-            });
-
-            qrSize.addEventListener('change', triggerUpdate);
-            qrLevel.addEventListener('change', triggerUpdate);
-            generateBtn.addEventListener('click', () => {
-                updateQR();
-                saveToHistory();
-                showToast('Kod QR został odświeżony!');
-            });
-
-            // --- History Management ---
-            function saveToHistory() {
-                const val = getQRValue();
-                if (!val || val === 'https://placekwlb.github.io' && !qrText.value.trim()) return;
-
-                // Avoid duplicate top entry
-                if (qrHistory.length > 0 && qrHistory[0] === val) return;
-
-                qrHistory.unshift(val);
-                if (qrHistory.length > 5) qrHistory.pop();
-
-                localStorage.setItem('qr_gen_history', JSON.stringify(qrHistory));
-                renderHistory();
-            }
-
-            function renderHistory() {
-                if (qrHistory.length === 0) {
-                    historyList.innerHTML = `<p class="text-xs text-slate-400 text-center py-3">Brak historii generowania</p>`;
-                    return;
-                }
-
-                historyList.innerHTML = qrHistory.map((item, idx) => {
-                    const shortText = item.length > 35 ? item.substring(0, 35) + '...' : item;
-                    return `
-                        <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-900/40 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition cursor-pointer group" data-idx="${idx}">
-                            <span class="text-xs font-mono text-slate-600 dark:text-slate-300 truncate max-w-[240px]">${escapeHtml(shortText)}</span>
-                            <button class="use-history-btn text-xs text-brand-600 dark:text-brand-400 font-medium opacity-0 group-hover:opacity-100 transition px-2 py-0.5 rounded bg-brand-50 dark:bg-brand-900/30">
-                                Wczytaj
-                            </button>
-                        </div>
-                    `;
-                }).join('');
-
-                document.querySelectorAll('.use-history-btn').forEach((btn, idx) => {
-                    btn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        const val = qrHistory[idx];
-                        activeTab = 'text';
-                        
-                        // Switch to text tab
-                        tabBtns[0].click();
-                        qrText.value = val;
-                        updateQR();
-                        showToast('Wczytano kod z historii');
-                    });
-                });
-            }
-
-            clearHistoryBtn.addEventListener('click', () => {
-                qrHistory = [];
-                localStorage.removeItem('qr_gen_history');
-                renderHistory();
-                showToast('Czyszczenie historii zakończone');
-            });
-
-            // --- Download & Copy Actions ---
-
-            // Download PNG
-            downloadPngBtn.addEventListener('click', () => {
-                const rawValue = getQRValue();
-                if (!rawValue) {
-                    showToast('Brak zawartości do pobrania!', true);
-                    return;
-                }
-
-                const dataUrl = qrCanvas.toDataURL('image/png');
-                const link = document.createElement('a');
-                link.download = `QRGen_${Date.now()}.png`;
-                link.href = dataUrl;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-
-                showToast('Pobrano plik PNG!');
-            });
-
-            // Copy Image to Clipboard
-            copyImgBtn.addEventListener('click', () => {
-                const rawValue = getQRValue();
-                if (!rawValue) {
-                    showToast('Brak kodu QR do skopiowania!', true);
-                    return;
-                }
-
-                try {
-                    qrCanvas.toBlob(blob => {
-                        if (!blob) {
-                            showToast('Nie udało się wygenerować obrazu.', true);
-                            return;
-                        }
-                        const item = new ClipboardItem({ 'image/png': blob });
-                        navigator.clipboard.write([item]).then(() => {
-                            showToast('Obraz QR skopiowano do schowka!');
-                        }).catch(err => {
-                            showToast('Przeglądarka zablokowała kopiowanie obrazu.', true);
-                        });
-                    });
-                } catch (e) {
-                    showToast('Kopiowanie obrazu nie jest wspierane.', true);
-                }
-            });
-
-            // Toast Notification System
-            function showToast(message, isError = false) {
-                const container = document.getElementById('toast-container');
-                const toast = document.createElement('div');
-                toast.className = `pointer-events-auto px-4 py-3 rounded-xl shadow-lg border text-sm font-medium flex items-center gap-2 transform transition-all duration-300 translate-y-2 opacity-0 ${
-                    isError 
-                    ? 'bg-rose-600 text-white border-rose-500' 
-                    : 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-slate-700 dark:border-slate-200'
-                }`;
-                
-                const icon = isError ? 'fa-circle-exclamation' : 'fa-circle-check';
-                toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${escapeHtml(message)}</span>`;
-                
-                container.appendChild(toast);
-
-                // Animate in
-                setTimeout(() => {
-                    toast.classList.remove('translate-y-2', 'opacity-0');
-                }, 10);
-
-                // Animate out
-                setTimeout(() => {
-                    toast.classList.add('opacity-0', 'translate-y-2');
-                    setTimeout(() => {
-                        if (container.contains(toast)) container.removeChild(toast);
-                    }, 300);
-                }, 3000);
-            }
-
-            function escapeHtml(str) {
-                return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-            }
-
-            // Initial setup
-            updateQR();
-            renderHistory();
+        downloadBtn.addEventListener('click', () => {
+            const canvas = document.getElementById('qrCanvas');
+            const link = document.createElement('a');
+            link.download = 'qrcode.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
         });
     </script>
 </body>
