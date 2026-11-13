@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#FBF9F4">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23191919'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%23F5322C'/%3E%3C/svg%3E">
+<title>qrgen | nobodymichael</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+<header><a class="brand" href="./">nobodymichael</a></header>
+<main>
+<h1>qrgen</h1>
+<p class="lead">Wpisz tekst albo link. Jeśli to adres strony bez https://, dodam go sam.</p>
+<div class="qrgrid">
+<div>
+<label class="field" for="in">Tekst lub link</label>
+<textarea id="in" autofocus spellcheck="false"></textarea>
+<p class="status" id="status" aria-live="polite"></p>
+<div class="row">
+<button class="btn" id="png" disabled>Pobierz PNG</button>
+<button class="btn ghost" id="svg" disabled>Pobierz SVG</button>
+</div>
+</div>
+<div class="qr" id="qr">Wpisz coś, a kod pojawi się tutaj.</div>
+</div>
+</main>
+</div>
+<footer class="wrap">Kod powstaje lokalnie w przeglądarce. Nic nie jest wysyłane.</footer>
+<script src="qrcode.js"></script>
+<script>
+(function(){
+  var INK="#191919", PAPER="#FBF9F4", Q=4;
+  qrcode.stringToBytes=qrcode.stringToBytesFuncs["UTF-8"];
+  var input=document.getElementById("in"), box=document.getElementById("qr"),
+      status=document.getElementById("status"),
+      bPng=document.getElementById("png"), bSvg=document.getElementById("svg");
+  var DOMAIN=/^(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}|localhost|\d{1,3}(?:\.\d{1,3}){3})(?::\d{1,5})?(?:[\/?#]\S*)?$/i;
+  var current=null;
+
+  function normalize(raw){
+    var t=raw.trim();
+    if(!t) return {text:"",kind:"empty"};
+    if(/\s/.test(t)) return {text:raw,kind:"text"};
+    if(/^https?:\/\//i.test(t)) return {text:t,kind:"link"};
+    if(DOMAIN.test(t)) return {text:"https://"+t,kind:"linkAdded"};
+    return {text:t,kind:"text"};
+  }
+
+  function build(text){
+    var qr=qrcode(0,"M"); qr.addData(text); qr.make();
+    var n=qr.getModuleCount(), d="";
+    for(var r=0;r<n;r++) for(var c=0;c<n;c++) if(qr.isDark(r,c)) d+="M"+(c+Q)+" "+(r+Q)+"h1v1h-1z";
+    var size=n+Q*2;
+    return {n:n,size:size,qr:qr,
+      svg:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+size+' '+size+'" shape-rendering="crispEdges"><rect width="'+size+'" height="'+size+'" fill="'+PAPER+'"/><path d="'+d+'" fill="'+INK+'"/></svg>'};
+  }
+
+  function render(){
+    var info=normalize(input.value);
+    current=null; bPng.disabled=bSvg.disabled=true;
+    if(info.kind==="empty"){ box.textContent="Wpisz coś, a kod pojawi się tutaj."; status.textContent=""; return; }
+    try{ current=build(info.text); }catch(e){
+      box.textContent="Za dużo tekstu na jeden kod QR."; status.textContent="Skróć tekst."; return;
+    }
+    box.innerHTML=current.svg;
+    bPng.disabled=bSvg.disabled=false;
+    status.textContent = info.kind==="linkAdded" ? "Wykryto link, dodano https://: "+info.text
+                       : info.kind==="link" ? "Wykryto link." : "";
+  }
+
+  function save(blob,name){
+    var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){URL.revokeObjectURL(a.href)},1000);
+  }
+
+  bSvg.onclick=function(){ if(current) save(new Blob([current.svg],{type:"image/svg+xml"}),"qr.svg"); };
+  bPng.onclick=function(){
+    if(!current) return;
+    var s=Math.max(1,Math.ceil(1024/current.size)), cv=document.createElement("canvas");
+    cv.width=cv.height=current.size*s;
+    var x=cv.getContext("2d"); x.fillStyle=PAPER; x.fillRect(0,0,cv.width,cv.height); x.fillStyle=INK;
+    for(var r=0;r<current.n;r++) for(var c=0;c<current.n;c++) if(current.qr.isDark(r,c)) x.fillRect((c+Q)*s,(r+Q)*s,s,s);
+    cv.toBlob(function(b){save(b,"qr.png")},"image/png");
+  };
+  input.addEventListener("input",render);
+})();
+</script>
+</body>
+</html>
